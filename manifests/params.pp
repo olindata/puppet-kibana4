@@ -6,7 +6,6 @@ class kibana4::params {
   $package_ensure              = '4.1.2-linux-x64'
   $package_name                = 'kibana'
   $package_provider            = 'archive'
-  $archive_provider            = 'camptocamp'
   $package_download_url        = undef
   $package_proxy_server        = undef
   $use_official_repo           = false
@@ -23,6 +22,7 @@ class kibana4::params {
   $kibana4_user                = 'kibana4'
   $kibana4_uid                 = undef
   $install_dir                 = '/opt'
+  $src_target                  = '/usr/src/kibana4'
   $symlink                     = true
   $symlink_name                = "${install_dir}/kibana4"
   $port                        = '5601'

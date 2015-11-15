@@ -13,49 +13,20 @@ class kibana4::install {
       default => $kibana4::package_download_url,
     }
 
-    case $kibana4::archive_provider {
-      'nanliu','puppet': {
-
-        if $kibana4::package_proxy_server {
-          fail("Setting a proxy server for archive download is not supported when \$archive_provider is '${kibana4::archive_provider}'")
-        }
-
-        archive { "${kibana4::install_dir}/kibana-${version}.tar.gz":
-          ensure        => present,
-          user          => 'root',
-          group         => 'root',
-          source        => $download_url,
-          extract_path  => $kibana4::install_dir,
-          # Extract files as the user doing the extracting, which is the user
-          # that runs Puppet, usually root
-          extract_flags => '-x --no-same-owner -f',
-          creates       => "${kibana4::install_dir}/kibana-${version}",
-          extract       => true,
-          cleanup       => true,
-        }
-
-        $symlink_require = Archive["${kibana4::install_dir}/kibana-${version}.tar.gz"]
-      }
-      'camptocamp': {
-        archive { "kibana-${version}":
-          ensure       => present,
-          checksum     => false,
-          target       => $kibana4::install_dir,
-          url          => $download_url,
-          proxy_server => $kibana4::package_proxy_server,
-        }
-
-        $symlink_require = Archive["kibana-${version}"]
-      }
-      default: {
-        fail("Unsupported \$archive_provider '${kibana4::archive_provider}'. Should be 'camptocamp' or 'nanliu' (aka 'puppet').")
-      }
+    archive { "kibana-${version}":
+      ensure            => present,
+      checksum          => false,
+      target            => $kibana4::install_dir,
+      url               => $download_url,
+      proxy_server      => $kibana4::package_proxy_server,
+      user              => $kibana4::kibana4_user,
+      src_target        => $kibana4::src_target, 
     }
 
     if $kibana4::symlink {
       file { $kibana4::symlink_name:
         ensure  => link,
-        require => $symlink_require,
+        require => Archive["kibana-${version}"],
         target  => "${kibana4::install_dir}/kibana-${version}",
       }
     }
@@ -68,12 +39,12 @@ class kibana4::install {
       case $::osfamily {
         'RedHat': {
           yumrepo { "kibana-${kibana4::repo_version}":
-            baseurl  => "http://packages.elastic.co/kibana/${kibana4::repo_version}/centos",
-            enabled  => '1',
-            gpgcheck => '1',
-            gpgkey   => 'https://packages.elastic.co/GPG-KEY-elasticsearch',
-            descr    => "Kibana repository for ${kibana4::repo_version}.x packages",
-            before   => Package['kibana4'],
+            baseurl   => "http://packages.elastic.co/kibana/${kibana4::repo_version}/centos",
+            enabled   => '1',
+            gpgcheck  => '1',
+            gpgkey    => 'https://packages.elastic.co/GPG-KEY-elasticsearch',
+            descr     => "Kibana repository for ${kibana4::repo_version}.x packages",
+            before    => Package['kibana4'],
           }
         }
         'Debian': {
@@ -81,17 +52,13 @@ class kibana4::install {
             class { 'apt': }
           }
           apt::source { "kibana-${kibana4::repo_version}":
-            location => "http://packages.elastic.co/kibana/${kibana4::repo_version}/debian",
-            release  => 'stable',
-            repos    => 'main',
-            key      => {
-              'source' => 'http://packages.elastic.co/GPG-KEY-elasticsearch',
-              'id'     => '46095ACC8548582C1A2699A9D27D666CD88E42B4'
-            },
-            include  => {
-              'src' => false
-            },
-            before   => Package['kibana4'],
+            location    => "http://packages.elastic.co/kibana/${kibana4::repo_version}/debian",
+            release     => 'stable',
+            repos       => 'main',
+            key         => { 'source' => 'http://packages.elastic.co/GPG-KEY-elasticsearch',
+                             'id'     => '46095ACC8548582C1A2699A9D27D666CD88E42B4' },
+            include     => { 'src' => false },
+            before    => Package['kibana4'],
           }
         }
         default: {
